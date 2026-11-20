@@ -1,0 +1,24 @@
+[Unit]
+Description=Easynet Web read-only dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=easynet
+Group=easynet
+WorkingDirectory=/opt/easynet-web
+EnvironmentFile=/etc/easynet-web.env
+ExecStart=/opt/easynet-web/.venv/bin/uvicorn easynet_web.api:app --app-dir /opt/easynet-web/backend --host ${API_HOST} --port ${API_PORT}
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/easynet-web /var/log/easynet-web
+
+[Install]
+WantedBy=multi-user.target
+
