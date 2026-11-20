@@ -1,0 +1,21 @@
+deploy/decrypt-backup.sh
+  s_b4799edf7a1ddb::t_64c505b0f38e4d 1-52
+deploy/upload-backup.sh
+  s_b4799edf7a1ddb::t_e9f9847339d004 15,34-39,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "29b725f269f1f2562429a8810a517de7116d5d42",
+  "prompts": {},
+  "sessions": {
+    "s_b4799edf7a1ddb": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "22219ae4-7b35-4184-87f6-534db768631e",
+        "model": "unknown"
+      },
+      "human_author": "Martín Calvete Iglesias <mcalvete@users.noreply.github.com>"
+    }
+  }
+}
