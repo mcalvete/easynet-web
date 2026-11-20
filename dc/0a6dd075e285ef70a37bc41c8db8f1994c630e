@@ -1,0 +1,23 @@
+constraints.txt
+  s_b4799edf7a1ddb::t_3cb723766eb4ce 1-31
+deploy/backup-easynet.sh
+  s_b4799edf7a1ddb::t_2af9c3ec0278b0 1-34
+frontend/package-lock.json
+  s_b4799edf7a1ddb::t_ca626ed6cfc47c 1-2045
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "dc0a6dd075e285ef70a37bc41c8db8f1994c630e",
+  "prompts": {},
+  "sessions": {
+    "s_b4799edf7a1ddb": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "22219ae4-7b35-4184-87f6-534db768631e",
+        "model": "unknown"
+      },
+      "human_author": "Martín Calvete Iglesias <mcalvete@users.noreply.github.com>"
+    }
+  }
+}
