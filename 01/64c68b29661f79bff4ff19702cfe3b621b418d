@@ -1,0 +1,21 @@
+constraints.txt
+  s_b4799edf7a1ddb::t_f3049cbfc031a6 1-31
+frontend/package-lock.json
+  s_b4799edf7a1ddb::t_9f706bab6dcd33 1-2045
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "0164c68b29661f79bff4ff19702cfe3b621b418d",
+  "prompts": {},
+  "sessions": {
+    "s_b4799edf7a1ddb": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "22219ae4-7b35-4184-87f6-534db768631e",
+        "model": "unknown"
+      },
+      "human_author": "Martín Calvete Iglesias <mcalvete@users.noreply.github.com>"
+    }
+  }
+}
