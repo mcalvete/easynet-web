@@ -98,6 +98,15 @@ CREATE TABLE IF NOT EXISTS app_config (
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS equipment_changes (
+    id INTEGER PRIMARY KEY,
+    timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    change_count INTEGER NOT NULL,
+    success INTEGER NOT NULL CHECK (success IN (0, 1)),
+    error TEXT,
+    snapshot_json TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS history_samples_recorded_at_idx
     ON history_samples(recorded_at);
 CREATE INDEX IF NOT EXISTS daily_energy_day_idx
@@ -166,6 +175,29 @@ class Database:
                 "SELECT language, temperature_unit, easynet_ip FROM app_config WHERE id = 1"
             ).fetchone()
         return dict(row) if row else None
+
+    def record_equipment_change(
+        self,
+        *,
+        change_count: int,
+        success: bool,
+        error: str | None,
+        snapshot: dict[str, object],
+    ) -> None:
+        with self.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO equipment_changes(
+                    change_count, success, error, snapshot_json
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (
+                    change_count,
+                    int(success),
+                    error,
+                    json.dumps(snapshot, ensure_ascii=False, separators=(",", ":")),
+                ),
+            )
 
     def save_app_config(
         self, *, language: str, temperature_unit: str, easynet_ip: str

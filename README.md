@@ -1,7 +1,8 @@
 # Easynet Web
 
-A modern, local, read-only web interface for monitoring an Ecoforest heat pump
-through EasyNet.
+A modern, local web interface for monitoring an Ecoforest heat pump through
+EasyNet, with an explicitly confirmed editing mode for supported user
+settings.
 
 Use it to:
 
@@ -15,20 +16,30 @@ Use it to:
 
 <table>
   <tr>
-    <td align="center" width="33%">
+    <td align="center" width="20%">
       <img src="docs/screenshots/status.png" alt="Easynet Web current status screen">
       <br>
       <strong>Current status</strong>
     </td>
-    <td align="center" width="33%">
-      <img src="docs/screenshots/temperatures.png" alt="Easynet Web temperature screen">
-      <br>
-      <strong>Temperatures and pressures</strong>
-    </td>
-    <td align="center" width="33%">
+    <td align="center" width="20%">
       <img src="docs/screenshots/history.png" alt="Easynet Web history screen">
       <br>
       <strong>Energy history</strong>
+    </td>
+    <td align="center" width="20%">
+      <img src="docs/screenshots/menu.png" alt="Easynet Web navigation menu">
+      <br>
+      <strong>Unified navigation</strong>
+    </td>
+    <td align="center" width="20%">
+      <img src="docs/screenshots/settings.png" alt="Easynet Web settings screen">
+      <br>
+      <strong>Safe settings editing</strong>
+    </td>
+    <td align="center" width="20%">
+      <img src="docs/screenshots/scheduling.png" alt="Easynet Web scheduling screen">
+      <br>
+      <strong>Scheduling</strong>
     </td>
   </tr>
 </table>
@@ -38,10 +49,12 @@ Use it to:
 
 [![Support this project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mcalve)
 
-## Read-only and local
+## Local access and safe editing
 
-This release does not change any EasyNet setting. It reads the pump, stores
-history in SQLite, and serves a dashboard to the trusted local network.
+The dashboard starts in read-only mode. Settings are changed only after the
+user enters editing mode, reviews the old and new values, and confirms the
+write. EasyNet changes are limited to a strict whitelist, serialized with
+reads, re-read after application, and recorded in an audit table.
 
 Do not expose EasyNet itself to the Internet.
 
@@ -314,9 +327,10 @@ converted to valid-looking values.
 
 ## Safety and disclaimer
 
-This is an unofficial, read-only project. It is not affiliated with or
-supported by Ecoforest. Use at your own risk and consult your installer for
-machine alarms or unexpected operation.
+This is an unofficial project and is not affiliated with or supported by
+Ecoforest. EasyNet writes are limited to documented user settings, but changing
+machine operation can affect comfort and safety. Use at your own risk and
+consult your installer for machine alarms or unexpected operation.
 
 Ecoforest and ecoGEO are trademarks of their respective owners.
 

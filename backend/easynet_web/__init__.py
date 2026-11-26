@@ -1,2 +1,2 @@
-"""Read-only Easynet web dashboard."""
+"""Easynet web dashboard with guarded configuration changes."""
 

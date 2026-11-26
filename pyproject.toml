@@ -1,7 +1,7 @@
 [project]
 name = "easynet-web"
 version = "0.1.0"
-description = "Read-only local web dashboard and historian for Ecoforest easyNet"
+description = "Local web dashboard, historian and guarded settings for Ecoforest easyNet"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115,<1",

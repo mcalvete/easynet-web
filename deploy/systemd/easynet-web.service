@@ -1,5 +1,5 @@
 [Unit]
-Description=Easynet Web read-only dashboard
+Description=Easynet Web dashboard
 After=network-online.target
 Wants=network-online.target
 

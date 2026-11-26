@@ -1,12 +1,11 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AppConfig, CurrentState, getJson } from './api';
-import { ConfigDialog } from './components/ConfigDialog';
 import { Overview } from './components/Overview';
 import { translate } from './i18n';
 import { TemperatureIcon } from './components/icons';
 
-type View = 'overview' | 'temperatures' | 'history';
+type View = 'overview' | 'temperatures' | 'history' | 'settings';
 const HistoryView = lazy(() =>
   import('./components/HistoryView').then((module) => ({ default: module.HistoryView })),
 );
@@ -15,12 +14,14 @@ const TemperatureView = lazy(() =>
     default: module.TemperatureView,
   })),
 );
+const SettingsView = lazy(() =>
+  import('./components/SettingsView').then((module) => ({ default: module.SettingsView })),
+);
 
-function SettingsIcon() {
+function MenuIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 15.25a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Z" />
-      <path d="M19.4 13.5a7.8 7.8 0 0 0 .05-1.5 7.8 7.8 0 0 0-.05-1.5l2-1.55-2-3.46-2.5 1a7.85 7.85 0 0 0-2.6-1.5L14 2.3h-4l-.4 2.7a7.85 7.85 0 0 0-2.6 1.5l-2.5-1-2 3.46 2 1.55a7.8 7.8 0 0 0-.05 1.5c0 .51.02 1.01.05 1.5l-2 1.55 2 3.46 2.5-1a7.85 7.85 0 0 0 2.6 1.5l.4 2.7h4l.4-2.7a7.85 7.85 0 0 0 2.6-1.5l2.5 1 2-3.46-2.1-1.56Z" />
+      <path d="M4 7h16M4 12h16M4 17h16" />
     </svg>
   );
 }
@@ -43,7 +44,8 @@ function HistoryIcon() {
 
 export function App() {
   const [view, setView] = useState<View>('overview');
-  const [configOpen, setConfigOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState('app');
+  const [menuOpen, setMenuOpen] = useState(false);
   const config = useQuery({
     queryKey: ['config'],
     queryFn: () => getJson<AppConfig>('/api/config'),
@@ -63,13 +65,35 @@ export function App() {
         : t('stopped')
     : '';
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const close = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('keydown', close);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener('keydown', close);
+    };
+  }, [menuOpen]);
+
+  const navigate = (next: View, section = 'app') => {
+    window.dispatchEvent(new Event('easynet:hide-chart-tooltip'));
+    setView(next);
+    setSettingsSection(section);
+    setMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="app">
       <header className="app-bar">
-        <div className="brand">
+        <button className="brand" onClick={() => navigate('overview')} aria-label={t('overview')}>
           <div className="brand-mark">E</div>
           <h1>Easynet</h1>
-        </div>
+        </button>
         <div className="app-bar-actions">
           {state.data && (
             <div
@@ -97,40 +121,31 @@ export function App() {
           )}
           <button
             className="icon-button"
-            onClick={() => {
-              window.dispatchEvent(new Event('easynet:hide-chart-tooltip'));
-              setConfigOpen(true);
-            }}
+            onClick={() => setMenuOpen((open) => !open)}
             disabled={!config.data}
-            aria-label={t('config')}
-            title={t('config')}
+            aria-label={t('menu')}
+            aria-expanded={menuOpen}
+            title={t('menu')}
           >
-            <SettingsIcon />
+            <MenuIcon />
           </button>
         </div>
       </header>
 
       <main>
-        <nav className="section-nav" aria-label={t('sections')}>
-          <button className={view === 'overview' ? 'selected' : ''} onClick={() => setView('overview')}>
-            <StatusIcon />
-            <span>{t('overview')}</span>
-          </button>
-          <button
-            className={view === 'temperatures' ? 'selected' : ''}
-            onClick={() => setView('temperatures')}
-          >
-            <TemperatureIcon />
-            <span>{t('temperatures')}</span>
-          </button>
-          <button className={view === 'history' ? 'selected' : ''} onClick={() => setView('history')}>
-            <HistoryIcon />
-            <span>{t('history')}</span>
-          </button>
-        </nav>
-
         <div className="content">
-          {view === 'history' ? (
+          {view === 'settings' && config.data ? (
+            <Suspense fallback={<div className="loading compact">{t('loadingSettings')}</div>}>
+              <SettingsView
+                appConfig={config.data}
+                language={language}
+                initialSection={settingsSection}
+                onAppConfigSaved={async () => {
+                  await config.refetch();
+                }}
+              />
+            </Suspense>
+          ) : view === 'history' ? (
             <Suspense fallback={<div className="loading compact">{t('loadingHistory')}</div>}>
               <HistoryView language={language} />
             </Suspense>
@@ -159,15 +174,31 @@ export function App() {
           )}
         </div>
       </main>
-      {configOpen && config.data && (
-        <ConfigDialog
-          config={config.data}
-          language={language}
-          onClose={() => setConfigOpen(false)}
-          onSaved={async () => {
-            await config.refetch();
-          }}
-        />
+      {menuOpen && (
+        <div className="app-menu-backdrop" onMouseDown={() => setMenuOpen(false)}>
+          <nav
+            className="app-menu"
+            aria-label={t('sections')}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="app-menu-header">
+              <strong>{t('menu')}</strong>
+              <button className="icon-button" onClick={() => setMenuOpen(false)} aria-label={t('close')}>×</button>
+            </div>
+            <button className={view === 'overview' ? 'selected' : ''} onClick={() => navigate('overview')}><StatusIcon />{t('overview')}</button>
+            <button className={view === 'temperatures' ? 'selected' : ''} onClick={() => navigate('temperatures')}><TemperatureIcon />{t('temperatures')}</button>
+            <button className={view === 'history' ? 'selected' : ''} onClick={() => navigate('history')}><HistoryIcon />{t('history')}</button>
+            <div className="app-menu-divider" />
+            <button className={view === 'settings' && settingsSection === 'app' ? 'selected' : ''} onClick={() => navigate('settings', 'app')}>{t('application')}</button>
+            <button className={view === 'settings' && settingsSection === 'system' ? 'selected' : ''} onClick={() => navigate('settings', 'system')}>{t('system')}</button>
+            <button className={view === 'settings' && settingsSection === 'heating' ? 'selected' : ''} onClick={() => navigate('settings', 'heating')}>{t('heating')}</button>
+            <button className={view === 'settings' && settingsSection === 'dhw' ? 'selected' : ''} onClick={() => navigate('settings', 'dhw')}>{t('dhw')}</button>
+            <button className={view === 'settings' && settingsSection === 'cooling' ? 'selected' : ''} onClick={() => navigate('settings', 'cooling')}>{t('cooling')}</button>
+            <button className={view === 'settings' && settingsSection === 'pool' ? 'selected' : ''} onClick={() => navigate('settings', 'pool')}>{t('pool')}</button>
+            <button className={view === 'settings' && settingsSection === 'scheduling' ? 'selected' : ''} onClick={() => navigate('settings', 'scheduling')}>{t('scheduling')}</button>
+            <button className={view === 'settings' && settingsSection === 'alarms' ? 'selected' : ''} onClick={() => navigate('settings', 'alarms')}>{t('alarms')}</button>
+          </nav>
+        </div>
       )}
     </div>
   );

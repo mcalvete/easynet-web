@@ -84,6 +84,73 @@ export interface AppConfig {
   easynet_ip: string;
 }
 
+export interface EquipmentSettings {
+  system: {
+    powered: boolean;
+    mode: number;
+    program: number;
+    auto_winter_c: number;
+    auto_summer_c: number;
+    auto_change_hours: number;
+  };
+  heating: {
+    enabled: boolean;
+    cutoff_c: number;
+    delta_c: number;
+    buffer_c: number;
+    group_offsets: number[];
+  };
+  dhw: {
+    enabled: boolean;
+    setpoint_c: number;
+    delta_c: number;
+    htr_setpoint_c: number;
+    legionella: {
+      enabled: boolean;
+      hour: number;
+      minute: number;
+      days: boolean[];
+    };
+  };
+  cooling: {
+    available: boolean;
+    enabled: boolean;
+    active_cutoff_c: number;
+    passive_cutoff_c: number;
+    delta_c: number;
+    group_offsets: number[];
+  };
+  pool: {
+    available: boolean;
+    enabled: boolean;
+    setpoint_c: number;
+    delta_c: number;
+    duration_minutes: number;
+    winter_enabled: boolean;
+    summer_enabled: boolean;
+  };
+  scheduling: Record<string, unknown>;
+  updated_at: string;
+}
+
+export interface EquipmentChange {
+  key: string;
+  before: boolean | number;
+  after: boolean | number;
+}
+
+export interface EquipmentApplyResult {
+  settings: EquipmentSettings;
+  changed: EquipmentChange[];
+  partial: boolean;
+}
+
+export interface EquipmentAlarms {
+  active: string[];
+  summary: Record<string, unknown>;
+  raw_code: string | null;
+}
+
 export async function putJson<T>(url: string, body: unknown): Promise<T> {
   const response = await fetch(url, {
     method: 'PUT',
@@ -92,6 +159,19 @@ export async function putJson<T>(url: string, body: unknown): Promise<T> {
   });
   if (!response.ok) {
     throw new Error(`API request failed with status ${response.status}`);
+  }
+  return response.json() as Promise<T>;
+}
+
+export async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || `API request failed with status ${response.status}`);
   }
   return response.json() as Promise<T>;
 }

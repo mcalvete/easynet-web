@@ -9,12 +9,24 @@ from fastapi import FastAPI, HTTPException
 from easynet_web.collector import Collector
 from easynet_web.config import get_settings
 from easynet_web.database import Database
+from easynet_web.easynet.client import EasyNetError
+from easynet_web.easynet.settings import (
+    EquipmentSettingsService,
+    SettingsApplyError,
+    SettingsError,
+    SettingsValidationError,
+)
 from easynet_web.models import (
+    AlarmResetRequest,
     AppConfig,
     CollectorHealth,
     CurrentState,
     DailyEnergy,
     DataFreshness,
+    EquipmentAlarmsResponse,
+    EquipmentSettingsApplyRequest,
+    EquipmentSettingsApplyResponse,
+    EquipmentSettingsResponse,
     MonthlyEnergy,
     YearlyEnergy,
     YearlyEnergyMonth,
@@ -40,6 +52,7 @@ def _csv_temperature(values: list[int], index: int) -> float | None:
 settings = get_settings()
 database = Database(settings.database_absolute_path)
 collector = Collector(settings, database)
+equipment_settings = EquipmentSettingsService(collector.client, database)
 
 
 @asynccontextmanager
@@ -86,6 +99,76 @@ async def update_config(value: AppConfig) -> AppConfig:
     )
     await collector.client.set_host(f"https://{value.easynet_ip}")
     return value
+
+
+@app.get("/api/equipment/settings", response_model=EquipmentSettingsResponse)
+async def get_equipment_settings() -> EquipmentSettingsResponse:
+    try:
+        return EquipmentSettingsResponse.model_validate(await equipment_settings.read_settings())
+    except (EasyNetError, SettingsError, KeyError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail=f"EasyNet settings read failed: {exc}") from exc
+
+
+@app.post(
+    "/api/equipment/settings/apply",
+    response_model=EquipmentSettingsApplyResponse,
+)
+async def apply_equipment_settings(
+    request: EquipmentSettingsApplyRequest,
+) -> EquipmentSettingsApplyResponse:
+    try:
+        result = await equipment_settings.apply(
+            request.changes,
+            confirm=request.confirm,
+        )
+        return EquipmentSettingsApplyResponse.model_validate(result)
+    except SettingsValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "invalid_equipment_change", "message": str(exc)},
+        ) from exc
+    except SettingsApplyError as exc:
+        raise HTTPException(status_code=502, detail=exc.detail()) from exc
+    except (EasyNetError, SettingsError) as exc:
+        detail = f"EasyNet settings apply failed: {exc}"
+        raise HTTPException(status_code=502, detail=detail) from exc
+
+
+@app.get("/api/equipment/alarms", response_model=EquipmentAlarmsResponse)
+async def get_equipment_alarms() -> EquipmentAlarmsResponse:
+    try:
+        return EquipmentAlarmsResponse.model_validate(await equipment_settings.read_alarms())
+    except (EasyNetError, SettingsError, KeyError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail=f"EasyNet alarm read failed: {exc}") from exc
+
+
+@app.post("/api/equipment/alarms/reset", response_model=EquipmentAlarmsResponse)
+async def reset_equipment_alarms(request: AlarmResetRequest) -> EquipmentAlarmsResponse:
+    try:
+        return EquipmentAlarmsResponse.model_validate(
+            await equipment_settings.reset_alarms(confirm=request.confirm)
+        )
+    except SettingsValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "invalid_alarm_reset", "message": str(exc)},
+        ) from exc
+    except SettingsApplyError as exc:
+        raise HTTPException(status_code=502, detail=exc.detail()) from exc
+
+
+@app.post("/api/equipment/clock/sync")
+async def sync_equipment_clock(request: AlarmResetRequest) -> dict[str, bool]:
+    try:
+        await equipment_settings.sync_clock(confirm=request.confirm)
+        return {"synchronized": True}
+    except SettingsValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "invalid_equipment_change", "message": str(exc)},
+        ) from exc
+    except SettingsApplyError as exc:
+        raise HTTPException(status_code=502, detail=exc.detail()) from exc
 
 
 @app.get("/api/state", response_model=CurrentState)

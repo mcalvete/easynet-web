@@ -91,6 +91,94 @@ class AppConfig(BaseModel):
         return value
 
 
+class EquipmentSystemSettings(BaseModel):
+    powered: bool
+    mode: int
+    program: int
+    auto_winter_c: float
+    auto_summer_c: float
+    auto_change_hours: int
+
+
+class EquipmentHeatingSettings(BaseModel):
+    enabled: bool
+    cutoff_c: float
+    delta_c: float
+    buffer_c: float
+    group_offsets: list[float] = Field(min_length=5, max_length=5)
+
+
+class EquipmentLegionellaSettings(BaseModel):
+    enabled: bool
+    hour: int
+    minute: int
+    days: list[bool] = Field(min_length=7, max_length=7)
+
+
+class EquipmentDhwSettings(BaseModel):
+    enabled: bool
+    setpoint_c: float
+    delta_c: float
+    htr_setpoint_c: float
+    legionella: EquipmentLegionellaSettings
+
+
+class EquipmentCoolingSettings(BaseModel):
+    available: bool
+    enabled: bool
+    active_cutoff_c: float
+    passive_cutoff_c: float
+    delta_c: float
+    group_offsets: list[float] = Field(min_length=5, max_length=5)
+
+
+class EquipmentPoolSettings(BaseModel):
+    available: bool
+    enabled: bool
+    setpoint_c: float
+    delta_c: float
+    duration_minutes: int
+    winter_enabled: bool
+    summer_enabled: bool
+
+
+class EquipmentSettingsResponse(BaseModel):
+    system: EquipmentSystemSettings
+    heating: EquipmentHeatingSettings
+    dhw: EquipmentDhwSettings
+    cooling: EquipmentCoolingSettings
+    pool: EquipmentPoolSettings
+    scheduling: dict[str, object]
+    updated_at: datetime
+
+
+class EquipmentSettingChange(BaseModel):
+    key: str
+    before: bool | int | float
+    after: bool | int | float
+
+
+class EquipmentSettingsApplyRequest(BaseModel):
+    changes: dict[str, bool | int | float]
+    confirm: bool = False
+
+
+class EquipmentSettingsApplyResponse(BaseModel):
+    settings: EquipmentSettingsResponse
+    changed: list[EquipmentSettingChange]
+    partial: bool = False
+
+
+class AlarmResetRequest(BaseModel):
+    confirm: bool = False
+
+
+class EquipmentAlarmsResponse(BaseModel):
+    active: list[str]
+    summary: dict[str, object]
+    raw_code: str | None
+
+
 class HistorySample(BaseModel):
     recorded_at: datetime
     occurrence: int = 0

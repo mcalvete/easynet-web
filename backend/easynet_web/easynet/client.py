@@ -78,6 +78,19 @@ class EasyNetClient:
         values = await self._read_address_range(body, 2001, address, count)
         return dict(zip(range(address, address + count), values, strict=True))
 
+    async def write_coil(self, address: int, value: bool) -> None:
+        self._validate_address_range(address, 1)
+        body = f"idOperacion=2011&dir={address}&num=1&{int(value)}"
+        await self._write_address(body, 2011)
+
+    async def write_register(self, address: int, value: int) -> None:
+        self._validate_address_range(address, 1)
+        if not isinstance(value, int) or not -32768 <= value <= 32767:
+            raise ValueError("Invalid Easynet register value")
+        encoded = value & 0xFFFF
+        body = f"idOperacion=2012&dir={address}&num=1&{encoded:04x}"
+        await self._write_address(body, 2012)
+
     async def fetch_history(self, url_path: str) -> str:
         return await self._serialized_get(url_path)
 
@@ -140,6 +153,18 @@ class EasyNetClient:
                 await asyncio.sleep(attempt + 1)
         raise EasyNetError("Easynet address read failed")
 
+    async def _write_address(self, body: str, operation: int) -> None:
+        for attempt in range(3):
+            raw = await self._serialized_post(body)
+            try:
+                self._parse_write_response(raw, operation)
+                return
+            except EasyNetError as exc:
+                if not exc.retryable or attempt == 2:
+                    raise
+                await asyncio.sleep(attempt + 1)
+        raise EasyNetError("Easynet address write failed")
+
     @staticmethod
     def _check_response(response: httpx.Response) -> str:
         if response.status_code == 401:
@@ -194,6 +219,21 @@ class EasyNetClient:
         if len(values) != count or any(" error" in value for value in values):
             raise EasyNetError("Incomplete Easynet register range", raw=raw)
         return values
+
+    @staticmethod
+    def _parse_write_response(raw: str, operation: int) -> None:
+        lines = EasyNetClient._lines(raw)
+        header = EasyNetClient._header(lines)
+        if header[0] != str(operation):
+            raise EasyNetError("Unexpected Easynet write response", raw=raw)
+        if header[1] != "0":
+            raise EasyNetError(
+                f"Easynet write operation {operation} failed",
+                raw=raw,
+                retryable=header[1] == "-7",
+            )
+        if len(lines) != 2 or lines[-1] != "0":
+            raise EasyNetError("Incomplete Easynet write response", raw=raw)
 
     @staticmethod
     def _header(lines: list[str]) -> tuple[str, str]:
